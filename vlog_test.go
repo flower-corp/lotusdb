@@ -2,15 +2,15 @@ package lotusdb
 
 import (
 	"bytes"
-	"github.com/flower-corp/lotusdb/logfile"
-	"github.com/stretchr/testify/assert"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/flower-corp/lotusdb/logfile"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestOpenValueLog(t *testing.T) {
@@ -462,8 +462,7 @@ func TestValueLog_Compaction_Normal(t *testing.T) {
 //}
 
 func testCompacction(t *testing.T, reading, writing bool) {
-	path, _ := ioutil.TempDir("", "lotusdb")
-	opts := DefaultOptions(path)
+	opts := DefaultOptions(t.TempDir())
 	opts.CfOpts.ValueLogFileSize = 16 * 1024 * 1024
 	opts.CfOpts.MemtableSize = 32 << 20
 	opts.CfOpts.ValueLogGCRatio = 0.5

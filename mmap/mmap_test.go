@@ -1,25 +1,21 @@
 package mmap
 
 import (
-	"github.com/flower-corp/lotusdb/logger"
-	"github.com/stretchr/testify/assert"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMmap(t *testing.T) {
-	dir, err := ioutil.TempDir("", "rosedb-mmap-test")
-	assert.Nil(t, err)
-	path := filepath.Join(dir, "mmap.txt")
+	path := filepath.Join(t.TempDir(), "mmap.txt")
 
 	fd, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
 	assert.Nil(t, err)
 	defer func() {
 		if fd != nil {
 			_ = fd.Close()
-			destroyDir(path)
 		}
 	}()
 	type args struct {
@@ -54,16 +50,13 @@ func TestMmap(t *testing.T) {
 }
 
 func TestMunmap(t *testing.T) {
-	dir, err := ioutil.TempDir("", "rosedb-mmap-test")
-	assert.Nil(t, err)
-	path := filepath.Join(dir, "mmap.txt")
+	path := filepath.Join(t.TempDir(), "mmap.txt")
 
 	fd, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
 	assert.Nil(t, err)
 	defer func() {
 		if fd != nil {
 			_ = fd.Close()
-			destroyDir(path)
 		}
 	}()
 
@@ -74,16 +67,13 @@ func TestMunmap(t *testing.T) {
 }
 
 func TestMsync(t *testing.T) {
-	dir, err := ioutil.TempDir("", "rosedb-mmap-test")
-	assert.Nil(t, err)
-	path := filepath.Join(dir, "mmap.txt")
+	path := filepath.Join(t.TempDir(), "mmap.txt")
 
 	fd, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
 	assert.Nil(t, err)
 	defer func() {
 		if fd != nil {
 			_ = fd.Close()
-			destroyDir(path)
 		}
 	}()
 
@@ -94,16 +84,13 @@ func TestMsync(t *testing.T) {
 }
 
 func TestMadvise(t *testing.T) {
-	dir, err := ioutil.TempDir("", "rosedb-mmap-test")
-	assert.Nil(t, err)
-	path := filepath.Join(dir, "mmap.txt")
+	path := filepath.Join(t.TempDir(), "mmap.txt")
 
 	fd, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
 	assert.Nil(t, err)
 	defer func() {
 		if fd != nil {
 			_ = fd.Close()
-			destroyDir(path)
 		}
 	}()
 
@@ -111,10 +98,4 @@ func TestMadvise(t *testing.T) {
 	assert.Nil(t, err)
 	err = Madvise(buf, false)
 	assert.Nil(t, err)
-}
-
-func destroyDir(dir string) {
-	if err := os.RemoveAll(dir); err != nil {
-		logger.Warnf("remove dir err: %v", err)
-	}
 }
