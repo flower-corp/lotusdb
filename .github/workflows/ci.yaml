@@ -7,17 +7,20 @@ on:
     branches: [ main ]
 
 jobs:
-
   build_test:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Set up Go
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v3
         with:
           go-version: 1.16
 
       - name: Check out code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v3
 
       - name: Build
         run: |
@@ -25,10 +28,39 @@ jobs:
           go build -v ./...
 
       - name: Run Unit tests.
-        run: go test -v ./... -coverprofile=coverage.txt -covermode=atomic
+        run: |
+          mkdir -p ./coverage
+          go test -v ./... -coverprofile=./coverage/coverage-${{ matrix.os }}.txt -covermode=atomic
 
-      - name: Upload Coverage report to CodeCov
-        uses: codecov/codecov-action@v1.0.0
+      - name: Upload coverage file
+        uses: actions/upload-artifact@v3
         with:
-          token: ${{secrets.CODECOV_TOKEN}}
-          file: ./coverage.txt
+          name: coverage
+          path: ./coverage
+
+  coverage:
+    runs-on: ubuntu-latest
+    needs: build_test
+    if: ${{ always() }}
+    steps:
+      - name: Download coverage files
+        uses: actions/download-artifact@v3
+        with:
+          name: coverage
+          path: ./coverage
+
+      - name: List coverage files
+        uses: actions/github-script@v3
+        id: files
+        with:
+          result-encoding: string
+          script: |
+            return require('fs').readdirSync('./coverage', {withFileTypes: true})
+              .filter(item => !item.isDirectory())
+              .map(item => `./coverage/${item.name}`)
+              .join(',');
+
+      - name: Send to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ${{ steps.files.outputs.result }}
