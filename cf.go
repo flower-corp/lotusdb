@@ -3,7 +3,6 @@ package lotusdb
 import (
 	"errors"
 	"fmt"
-	"github.com/flower-corp/lotusdb/flock"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -14,6 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/flower-corp/lotusdb/flock"
 	"github.com/flower-corp/lotusdb/index"
 	"github.com/flower-corp/lotusdb/logfile"
 	"github.com/flower-corp/lotusdb/util"
@@ -132,12 +132,13 @@ func (db *LotusDB) OpenColumnFamily(opts ColumnFamilyOptions) (*ColumnFamily, er
 		gcRatio:    opts.ValueLogGCRatio,
 		gcInterval: opts.ValueLogGCInterval,
 	}
-	valueLog, err := openValueLog(vlogOpt)
-	if err != nil {
-		return nil, err
-	}
+	valueLog := newValueLog(vlogOpt)
 	cf.vlog = valueLog
 	valueLog.cf = cf
+
+	if err := valueLog.Open(); err != nil {
+		return nil, err
+	}
 
 	// create bptree indexer.
 	bptreeOpt := &index.BPTreeOptions{

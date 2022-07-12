@@ -2,8 +2,6 @@ package lotusdb
 
 import (
 	"bytes"
-	"github.com/flower-corp/lotusdb/logfile"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -11,6 +9,9 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/flower-corp/lotusdb/logfile"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestOpenValueLog(t *testing.T) {
@@ -417,7 +418,10 @@ func openValueLogForTest(path string, blockSize int64, ioType logfile.IOType, gc
 		ioType:    ioType,
 		gcRatio:   gcRatio,
 	}
-	return openValueLog(opts)
+	vlog := newValueLog(opts)
+	err := vlog.Open()
+
+	return vlog, err
 }
 
 func TestValueLog_Compaction_Normal(t *testing.T) {

@@ -3,9 +3,6 @@ package lotusdb
 import (
 	"errors"
 	"fmt"
-	"github.com/flower-corp/lotusdb/index"
-	"github.com/flower-corp/lotusdb/logfile"
-	"github.com/flower-corp/lotusdb/logger"
 	"io"
 	"io/ioutil"
 	"os"
@@ -17,6 +14,10 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/flower-corp/lotusdb/index"
+	"github.com/flower-corp/lotusdb/logfile"
+	"github.com/flower-corp/lotusdb/logger"
 )
 
 var (
@@ -56,11 +57,17 @@ type (
 	}
 )
 
+func newValueLog(opt vlogOptions) *valueLog {
+	return &valueLog{
+		opt: opt,
+	}
+}
+
 // openValueLog create a new value log file.
-func openValueLog(opt vlogOptions) (*valueLog, error) {
-	fileInfos, err := ioutil.ReadDir(opt.path)
+func (vlog *valueLog) Open() error {
+	fileInfos, err := ioutil.ReadDir(vlog.opt.path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var fids []uint32
@@ -69,7 +76,7 @@ func openValueLog(opt vlogOptions) (*valueLog, error) {
 			splitNames := strings.Split(file.Name(), ".")
 			fid, err := strconv.Atoi(splitNames[0])
 			if err != nil {
-				return nil, err
+				return err
 			}
 			fids = append(fids, uint32(fid))
 		}
@@ -84,25 +91,22 @@ func openValueLog(opt vlogOptions) (*valueLog, error) {
 	}
 
 	// open discard file.
-	discard, err := newDiscard(opt.path, vlogDiscardName)
+	discard, err := newDiscard(vlog.opt.path, vlogDiscardName)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// open active log file only.
-	logFile, err := logfile.OpenLogFile(opt.path, fids[len(fids)-1], opt.blockSize, logfile.ValueLog, opt.ioType)
+	logFile, err := logfile.OpenLogFile(vlog.opt.path, fids[len(fids)-1], vlog.opt.blockSize, logfile.ValueLog, vlog.opt.ioType)
 	// set total size in discard file, skip it if exist.
-	discard.setTotal(fids[len(fids)-1], uint32(opt.blockSize))
+	discard.setTotal(fids[len(fids)-1], uint32(vlog.opt.blockSize))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	vlog := &valueLog{
-		opt:           opt,
-		activeLogFile: logFile,
-		logFiles:      make(map[uint32]*logfile.LogFile),
-		discard:       discard,
-	}
+	vlog.activeLogFile = logFile
+	vlog.logFiles = make(map[uint32]*logfile.LogFile)
+	vlog.discard = discard
 
 	// load other log files when reading from it.
 	for i := 0; i < len(fids)-1; i++ {
@@ -110,10 +114,10 @@ func openValueLog(opt vlogOptions) (*valueLog, error) {
 	}
 
 	if err := vlog.setLogFileState(); err != nil {
-		return nil, err
+		return err
 	}
 	go vlog.handleCompaction()
-	return vlog, nil
+	return nil
 }
 
 // Read a VLogEntry from a specified vlog file at offset, returns an error, if any.
